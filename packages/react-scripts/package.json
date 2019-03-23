@@ -1,6 +1,6 @@
 {
   "name": "zinc-react-scripts",
-  "version": "2.1.8",
+  "version": "2.1.15",
   "description": "Configuration and scripts for Create React App.",
   "repository": "facebook/create-react-app",
   "license": "MIT",
@@ -61,7 +61,7 @@
     "postcss-preset-env": "6.6.0",
     "postcss-safe-parser": "4.0.1",
     "react-app-polyfill": "^0.2.2",
-    "react-dev-utils": "^8.0.0",
+    "react-dev-utils": "npm:zinc-react-dev-utils@8.0.1",
     "resolve": "1.10.0",
     "sass-loader": "7.1.0",
     "style-loader": "0.23.1",
@@ -69,7 +69,7 @@
     "url-loader": "1.1.2",
     "webpack": "4.29.6",
     "webpack-dev-server": "3.2.1",
-    "webpack-manifest-plugin": "2.0.4",
+    "webpack-manifest-plugin": "^2.0.4",
     "workbox-webpack-plugin": "3.6.3"
   },
   "devDependencies": {
