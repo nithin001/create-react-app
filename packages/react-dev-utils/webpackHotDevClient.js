@@ -16,7 +16,6 @@
 // that looks similar to our console output. The error overlay is inspired by:
 // https://github.com/glenjamin/webpack-hot-middleware
 
-var SockJS = require('sockjs-client');
 var stripAnsi = require('strip-ansi');
 var url = require('url');
 var launchEditorEndpoint = require('./launchEditorEndpoint');
@@ -57,38 +56,15 @@ if (module.hot && typeof module.hot.dispose === 'function') {
   });
 }
 
-function getCurrentScriptSource() {
-  // `document.currentScript` is the most accurate way to find the current script,
-  // but is not supported in all browsers.
-  if (document.currentScript) {
-    return document.currentScript.getAttribute('src');
-  }
-  // Fall back to getting all scripts in the document.
-  const scriptElements = document.scripts || [];
-  const currentScript = scriptElements[scriptElements.length - 1];
-  if (currentScript) {
-    return currentScript.getAttribute('src');
-  }
-  // Fail as there was no script to use.
-  throw new Error('[WDS] Failed to get current script source.');
-}
-
-let scriptHost = getCurrentScriptSource();
-scriptHost = scriptHost.replace(/\/[^\/]+$/, '');
-const urlParts = url.parse(scriptHost || '/', false, true);
-
-if (!urlParts.port || urlParts.port === '0') {
-  urlParts.port = window.location.port;
-}
-
 // Connect to WebpackDevServer via a socket.
-var connection = new SockJS(
+var connection = new WebSocket(
   url.format({
-    protocol: window.location.protocol,
-    hostname: window.location.hostname,
-    port: urlParts.port,
+    protocol: window.location.protocol === 'https:' ? 'wss' : 'ws',
+    hostname: process.env.WDS_SOCKET_HOST || window.location.hostname,
+    port: process.env.WDS_SOCKET_PORT || window.location.port,
     // Hardcoded in WebpackDevServer
-    pathname: '/sockjs-node',
+    pathname: process.env.WDS_SOCKET_PATH || '/sockjs-node',
+    slashes: true,
   })
 );
 

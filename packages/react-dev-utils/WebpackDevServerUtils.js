@@ -22,20 +22,20 @@ const forkTsCheckerWebpackPlugin = require('./ForkTsCheckerWebpackPlugin');
 
 const isInteractive = process.stdout.isTTY;
 
-function prepareUrls(protocol, host, port) {
+function prepareUrls(protocol, host, port, pathname = '/') {
   const formatUrl = hostname =>
     url.format({
       protocol,
       hostname,
       port,
-      pathname: '/',
+      pathname,
     });
   const prettyPrintUrl = hostname =>
     url.format({
       protocol,
       hostname,
       port: chalk.bold(port),
-      pathname: '/',
+      pathname,
     });
 
   const isUnspecifiedHost = host === '0.0.0.0' || host === '::';
@@ -108,6 +108,7 @@ function createCompiler({
   urls,
   useYarn,
   useTypeScript,
+  tscCompileOnError,
   webpack,
 }) {
   // "Compiler" is a low-level interface to Webpack.
@@ -190,16 +191,28 @@ function createCompiler({
 
       const messages = await tsMessagesPromise;
       clearTimeout(delayedMsg);
-      statsData.errors.push(...messages.errors);
+      if (tscCompileOnError) {
+        statsData.warnings.push(...messages.errors);
+      } else {
+        statsData.errors.push(...messages.errors);
+      }
       statsData.warnings.push(...messages.warnings);
 
       // Push errors and warnings into compilation result
       // to show them after page refresh triggered by user.
-      stats.compilation.errors.push(...messages.errors);
+      if (tscCompileOnError) {
+        stats.compilation.warnings.push(...messages.errors);
+      } else {
+        stats.compilation.errors.push(...messages.errors);
+      }
       stats.compilation.warnings.push(...messages.warnings);
 
       if (messages.errors.length > 0) {
-        devSocket.errors(messages.errors);
+        if (tscCompileOnError) {
+          devSocket.warnings(messages.errors);
+        } else {
+          devSocket.errors(messages.errors);
+        }
       } else if (messages.warnings.length > 0) {
         devSocket.warnings(messages.warnings);
       }
@@ -361,10 +374,18 @@ function prepareProxy(proxy, appPublicFolder) {
     process.exit(1);
   }
 
-  // If proxy is specified, let it handle any request except for files in the public folder.
+  // If proxy is specified, let it handle any request except for
+  // files in the public folder and requests to the WebpackDevServer socket endpoint.
+  // https://github.com/facebook/create-react-app/issues/6720
+  const sockPath = process.env.WDS_SOCKET_PATH || '/sockjs-node';
+  const isDefaultSockHost = !process.env.WDS_SOCKET_HOST;
   function mayProxy(pathname) {
     const maybePublicPath = path.resolve(appPublicFolder, pathname.slice(1));
-    return !fs.existsSync(maybePublicPath);
+    const isPublicFileRequest = fs.existsSync(maybePublicPath);
+    // used by webpackHotDevClient
+    const isWdsEndpointRequest =
+      isDefaultSockHost && pathname.startsWith(sockPath);
+    return !(isPublicFileRequest || isWdsEndpointRequest);
   }
 
   if (!/^http(s)?:\/\//.test(proxy)) {
